@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Chat</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.css">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
+        crossorigin="anonymous"></script>
+
+    <link href="assets/css/chat.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="/assets/css/all.min.css">
+
+    <!-- For debugging -->
+    <script>
+        window.addEventListener('load', () => {
+            const styles = document.styleSheets;
+            let fontAwesomeLoaded = false;
+            for (let i = 0; i < styles.length; i++) {
+                if (styles[i].href && styles[i].href.includes('all.min.css')) {
+                    fontAwesomeLoaded = true;
+                    // console.log('Font Awesome stylesheet found:', styles[i].href);
+                    break;
+                }
+            }
+            // console.log('Font Awesome loaded:', fontAwesomeLoaded);
+        });
+    </script>
+
+    <style>
+        .profile-img {
+            width: 45px;
+        }
+
+        #typing {
+            padding: 5px 10px;
+            color: #666;
+            font-style: italic;
+            min-height: 1.2em;
+        }
+
+        .user-list-item {
+            cursor: pointer;
+            padding: 10px 5px 5px 6px;
+        }
+
+        .user-list-item.active-user {
+            background-color: #d3d2d2;
+        }
+
+        #sidebar {
+            width: 200px;
+            border-right: 1px solid #ccc;
+            padding: 10px;
+            float: left;
+            /* Align sidebar to the left */
+        }
+
+        .badge-count {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background-color: #206b6f;
+            color: white;
+            border-radius: 50%;
+            min-width: 18px;
+            height: 18px;
+            padding: 9px 3px;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            border: 1px solid white;
+        }
+
+        .flex-shrink-0 {
+            position: relative;
+        }
+
+        .read-status {
+            font-size: 0.8em;
+            margin-left: 5px;
+            color: #8e8e8e;
+            position: absolute;
+            bottom: 2px;
+            right: 5px;
+        }
+
+        .read-status .fa {
+            font-size: 12px;
+            margin-left: 5px;
+            position: relative;
+            bottom: -5px;
+        }
+
+        li.reply {
+            position: relative;
+        }
+
+        .reply .read-status {
+            position: absolute;
+            right: 8px;
+            bottom: 4px;
+            font-size: 11px;
+        }
+
+        /* Single check (sent) */
+        .fa-check {
+            color: #a1a1a1;
+            /* Light gray for sent */
+        }
+
+        /* Double check (read) */
+        .fa-check-double {
+            color: #0099ff;
+            /* Blue for read */
+        }
+
+        /* Hover effects */
+        .fa-check:hover,
+        .fa-check-double:hover {
+            opacity: 0.8;
+        }
+
+        .read-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .logout-btn {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            padding: 6px 12px;
+            font-size: 14px;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 1000;
+            /* Ensures it stays on top */
+        }
+    </style>
+</head>
+
+<body>
+    <div id="header-placeholder"></div>
+
+    <!-- char-area -->
+    <section class="message-area">
+        <div class="container">
+            <div class="row">
+                <div class="col-12">
+                    <div class="chat-area">
+                        <!-- chatlist -->
+                        <div class="chatlist">
+                            <div class="modal-dialog-scrollable">
+                                <div class="modal-content">
+
+
+                                    <div class="chat-header">
+                                        <div class="msg-search">
+                                            <input type="text" class="form-control" id="searchUser" placeholder="Search"
+                                                aria-label="search">
+                                            <!-- <a class="add" href="#"><img class="img-fluid"
+                                                    src="https://mehedihtml.com/chatbox/assets/img/add.svg"
+                                                    alt="add"></a> -->
+                                        </div>
+
+                                        <ul class="nav nav-tabs" id="myTab" role="tablist">
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link active" id="Open-tab" data-bs-toggle="tab"
+                                                    data-bs-target="#Open" type="button" role="tab" aria-controls="Open"
+                                                    aria-selected="true">Chat Users</button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="Closed-tab" data-bs-toggle="tab"
+                                                    data-bs-target="#Closed" type="button" role="tab"
+                                                    aria-controls="Closed" aria-selected="false">All Users</button>
+                                            </li>
+                                        </ul>
+                                    </div>
+
+                                    <div class="modal-body" id="side-bar">
+                                        <!-- chat-list -->
+                                        <div class="chat-lists">
+                                            <div class="tab-content" id="myTabContent">
+
+                                                <div class="tab-pane fade show active" id="Open" role="tabpanel"
+                                                    aria-labelledby="Open-tab">
+                                                    <!-- chat-list -->
+                                                    <div class="chat-list" id="chatUserList">
+                                                    </div>
+                                                    <!-- chat-list -->
+                                                </div>
+                                                <div class="tab-pane fade" id="Closed" role="tabpanel"
+                                                    aria-labelledby="Closed-tab">
+                                                    <!-- chat-list -->
+                                                    <div class="chat-list" id="userList">
+
+                                                    </div>
+                                                    <!-- chat-list -->
+                                                </div>
+                                            </div>
+
+                                        </div>
+                                        <!-- chat-list -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- chatlist -->
+
+
+
+                        <!-- chatbox -->
+                        <div class="chatbox">
+                            <div class="modal-dialog-scrollable">
+                                <div class="modal-content">
+                                    <div class="msg-head">
+
+                                        <div class="row">
+                                            <div class="col-8">
+                                                <div class="d-flex align-items-center">
+                                                    <span class="chat-icon" id="toggleUserList"><img class="img-fluid"
+                                                            src="https://mehedihtml.com/chatbox/assets/img/arroleftt.svg"
+                                                            alt="image title"></span>
+                                                    <div class="flex-shrink-0">
+                                                        <img class="img-fluid profile-img"
+                                                            src="../assets/static-images/user-icon.png" alt="user img">
+                                                    </div>
+                                                    <div class="flex-grow-1 ms-3">
+                                                        <h3 id="toUserName"></h3>
+                                                        <!-- <p>front end developer</p> -->
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <!-- <div class="col-4">
+                                                <ul class="moreoption">
+                                                    <li class="navbar nav-item dropdown">
+                                                        <a class="nav-link dropdown-toggle" href="#" role="button"
+                                                            data-bs-toggle="dropdown" aria-expanded="false"><i
+                                                                class="fa fa-ellipsis-v" aria-hidden="true"></i></a>
+                                                        <ul class="dropdown-menu">
+                                                            <li><a class="dropdown-item" href="#">Action</a></li>
+                                                            <li><a class="dropdown-item" href="#">Another action</a>
+                                                            </li>
+                                                            <li>
+                                                                <hr class="dropdown-divider">
+                                                            </li>
+                                                            <li><a class="dropdown-item" href="#">Something else
+                                                                    here</a></li>
+                                                        </ul>
+                                                    </li>
+                                                </ul>
+                                            </div> -->
+                                        </div>
+                                    </div>
+
+
+                                    <div class="modal-body">
+                                        <div class="msg-body">
+                                            <ul id="chatList">
+                                            </ul>
+                                        </div>
+                                    </div>
+
+
+                                    <div class="send-box">
+                                        <div id="typing"></div>
+                                        <form id="form" action="">
+                                            <input id="messageInput" type="text" autocomplete="off" class="form-control"
+                                                aria-label="message…" placeholder="Type a message...">
+
+                                            <button type="submit"><i class="fa fa-paper-plane" aria-hidden="true"
+                                                    id="button"></i>Send</button>
+                                        </form>
+
+                                        <div class="send-btns">
+                                            <div class="attach">
+                                                <div class="button-wrapper">
+                                                    <span class="label">
+                                                        <img class="img-fluid"
+                                                            src="https://mehedihtml.com/chatbox/assets/img/upload.svg"
+                                                            alt="image title"> attached file
+                                                    </span><input type="file" name="upload" id="upload"
+                                                        class="upload-box" placeholder="Upload File"
+                                                        aria-label="Upload File">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- chatbox -->
+
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- char-area -->
+
+    <!-- Footer Placeholder -->
+    <div id="footer-placeholder"></div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"
+        integrity="sha384-mZLF4UVrpi/QTWPA7BjNPEnkIfRFn4ZEO3Qt/HFklTJBj/gBOV8G3HcKn4NfQblz"
+        crossorigin="anonymous"></script>
+
+    <script src="footer.js"></script>
+    <script src="assets/js/chat.js"></script>
+    <script>
+
+        // Function to move sender to top of chat list when receiving a message
+        function moveSenderToTop(senderId, lastMessage) {
+
+            const existingUser = document.querySelector(`#chatUserList [data-user-id="${senderId}"]`);
+
+            if (existingUser) {
+                // Update last message
+                const messagePreview = existingUser.querySelector('.flex-grow-1 p');
+                if (messagePreview) {
+                    messagePreview.textContent = lastMessage;
+                }
+
+                // Always move to top regardless of current position
+                chatUserList.removeChild(existingUser);
+                chatUserList.insertBefore(existingUser, chatUserList.firstChild);
+
+                // Scroll the moved user into view at the top
+                const sideBar = document.getElementById('side-bar');
+                sideBar.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+
+                // Also move in the all users list
+                const userInAllList = document.querySelector(`#userList [data-user-id="${senderId}"]`);
+                if (userInAllList) {
+                    userList.removeChild(userInAllList);
+                    userList.insertBefore(userInAllList, userList.firstChild);
+                }
+            } else {
+                // If sender not in chat list, fetch their details and create new entry
+                fetch(`${apiUrl}/users/${senderId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }).then(response => {
+                    handleUnauthorized(response);
+                    return response.json();
+                }).then(response => {
+                    const userData = response.data.user;
+                    const newChatUserListItem = document.createElement("a");
+                    newChatUserListItem.className = "d-flex align-items-center user-list-item";
+                    newChatUserListItem.setAttribute('data-user-id', senderId);
+
+                    newChatUserListItem.innerHTML = `
+                        <div class="flex-shrink-0">
+                            <img class="img-fluid profile-img" src="../assets/static-images/user-icon.png" alt="user img">
+                            <span class="online-status"></span>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h3>${userData.firstName} ${userData.lastName}</h3>
+                            <p>${lastMessage}</p>
+                        </div>
+                    `;
+
+                    // Add click handler
+                    newChatUserListItem.addEventListener('click', debounce(() =>
+                        handleUserSelection(senderId, userData.firstName, userData.lastName, newChatUserListItem)
+                        , 300));
+
+                    // Check if user is online
+                    if (window.onlineUsers && window.onlineUsers.some(ou => ou.userId === senderId)) {
+                        const statusSpan = newChatUserListItem.querySelector('.online-status');
+                        if (statusSpan) {
+                            statusSpan.classList.add('online');
+                        }
+                    }
+
+                    // Insert at the top of chat list
+                    chatUserList.insertBefore(newChatUserListItem, chatUserList.firstChild);
+
+                    // Scroll to top
+                    const sideBar = document.getElementById('side-bar');
+                    sideBar.scrollTo({
+                        top: 0,
+                        behavior: 'smooth'
+                    });
+                }).catch(error => {
+                    console.error("Error fetching user details:", error);
+                });
+            }
+        }
+
+        // Function to update online status for a user
+        function updateUserOnlineStatus(userId, isOnline) {
+            ['userList', 'chatUserList'].forEach(listId => {
+                const userElements = document.querySelectorAll(`#${listId} .user-list-item`);
+                userElements.forEach(element => {
+                    if (element.getAttribute('data-user-id') === userId) {
+                        const statusSpan = element.querySelector('.online-status');
+                        if (statusSpan) {
+                            if (isOnline) {
+                                statusSpan.classList.add('online');
+                            } else {
+                                statusSpan.classList.remove('online');
+                            }
+                        }
+                    }
+                });
+            });
+        }
+
+        // Function to load users
+        function loadUsers(page, searchValue, eventType = '') {
+
+            fetch(`${apiUrl}/users?page=${page}&search=${searchValue}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => {
+                    if (response) {
+                        handleUnauthorized(response)
+                    }
+
+                    if (!response.ok) {
+                        throw new Error("Network response was not ok");
+                    }
+                    return response.json();
+                })
+                .then(usersResponse => {
+
+                    if (usersResponse.data.users.length === 0) {
+                        hasMoreUsers = false;
+                    }
+
+                    if (eventType === 'keyup') {
+                        userList.innerHTML = ''
+                        if (searchValue === '') {
+                            currentPage = 1;
+                            hasMoreUsers = true;
+                        }
+                    }
+
+                    usersResponse.data.users.forEach(user => {
+                        const userListItem = document.createElement("a");
+                        userListItem.className = "d-flex align-items-center user-list-item";
+                        userListItem.setAttribute('data-user-id', user._id);
+                        userListItem.innerHTML = `
+                            <div class="flex-shrink-0">
+                                <img class="img-fluid profile-img" src="../assets/static-images/user-icon.png" alt="user img">
+                                <span class="online-status"></span>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h3>${user.firstName} ${user.lastName}</h3>
+                                <p>front end developer</p>
+                            </div>
+                        `;
+
+                        // Add click handler with debounce
+                        userListItem.addEventListener('click', debounce(() =>
+                            handleUserSelection(user._id, user.firstName, user.lastName, userListItem)
+                            , 300));
+
+                        // Check if user is online after adding to DOM
+                        if (window.onlineUsers && window.onlineUsers.some(ou => ou.userId === user._id)) {
+                            const statusSpan = userListItem.querySelector('.online-status');
+                            if (statusSpan) {
+                                statusSpan.classList.add('online');
+                            }
+                        }
+
+                        userList.appendChild(userListItem);
+                    });
+                })
+                .catch(error => {
+                    console.error("There was a problem with the fetch operation:", error);
+                });
+        }
+
+        // Function to load ChatUsers
+        function loadChatUsers(page, searchValue, eventType = '') {
+
+            fetch(`${apiUrl}/messages/chat-users?page=${page}&search=${searchValue}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            }).then(response => {
+                if (response) {
+                    handleUnauthorized(response)
+                }
+
+                if (!response.ok) {
+                    throw new Error("Network response was not ok");
+                }
+                return response.json();
+            }).then(usersResponse => {
+
+                if (eventType === 'keyup') {
+                    chatUserList.innerHTML = ''
+                    if (searchValue === '') {
+                        chatUserCurrentPage = 1;
+                        hasMoreChatUsers = true;
+                    }
+                }
+
+                if (usersResponse.data.users.length === 0) {
+                    hasMoreChatUsers = false;
+                }
+
+                usersResponse.data.users.forEach((user, index) => {
+                    const chatUserListItem = document.createElement("a");
+                    chatUserListItem.className = "d-flex align-items-center user-list-item";
+                    chatUserListItem.setAttribute('data-user-id', user.userId);
+                    if (index === 0 && page === 1) {
+                        toUserId = user.userId;
+                        toUserName = user.firstName + " " + user.lastName
+                        document.getElementById("toUserName").textContent = toUserName
+                        chatUserListItem.classList.add('active-user');
+                    }
+
+                    chatUserListItem.innerHTML = `
+                        <div class="flex-shrink-0">
+                            <img class="img-fluid profile-img" src="../assets/static-images/user-icon.png" alt="user img">
+                            <span class="online-status"></span>
+                            ${user.unreadCount > 0 ? `<span class="badge-count">${user.unreadCount}</span>` : ''}
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h3>${user.firstName} ${user.lastName}</h3>
+                            <p>${user.latestMessage.content}</p>
+                        </div>
+                    `;
+
+                    // Check if user is online after adding to DOM
+                    if (window.onlineUsers && window.onlineUsers.some(ou => ou.userId === user.userId)) {
+                        const statusSpan = chatUserListItem.querySelector('.online-status');
+                        if (statusSpan) {
+                            statusSpan.classList.add('online');
+                        }
+                    }
+
+
+                    // Add click handler with debounce
+                    chatUserListItem.addEventListener('click', debounce(() =>
+                        handleUserSelection(user.userId, user.firstName, user.lastName, chatUserListItem)
+                        , 300));
+                    chatUserList.appendChild(chatUserListItem);
+
+                });
+
+                let firstUnreadMessage = null;
+                let lastReadMessage = null;
+                let lastMessageElement = null;
+
+                const hasMessages = (usersResponse.data.message_data &&
+                    Object.keys(usersResponse.data.message_data).length > 0 &&
+                    usersResponse.data.message_data.messages) ? true : false;
+
+                if (!hasMessages) {
+                    loadNewMessages = false;
+                }
+
+                if (hasMessages && page === 1) {
+
+                    usersResponse.data.message_data.messages.forEach(message => {
+
+                        const messageElement = createMessageElement(message, message.from_user_id._id);
+
+                        const messageClass = String(message.from_user_id._id) === String(user.id) ? 'reply' : 'sender';
+                        if (!message.is_read && messageClass === 'sender' && !firstUnreadMessage) {
+                            firstUnreadMessage = messageElement;
+                        }
+
+                        if (message.is_read && messageClass === 'sender') {
+                            messageElement.classList.add('read');
+                            lastReadMessage = messageElement;
+                        }
+
+                        lastMessageElement = messageElement;
+
+                        chatList.appendChild(messageElement);
+
+                    })
+
+                    // Wait for images and content to load
+                    requestAnimationFrame(() => {
+                        if (firstUnreadMessage) {
+
+                            // Scroll to first unread message
+                            const messageTop = firstUnreadMessage.offsetTop;
+                            const containerHeight = chatContainer.clientHeight;
+                            const scrollPosition = messageTop - (containerHeight / 2) + (firstUnreadMessage.offsetHeight / 2);
+
+                            chatContainer.scrollTo({
+                                top: scrollPosition,
+                                behavior: 'smooth'
+                            });
+                        } else if (lastMessageElement) {
+                            // If no unread messages, scroll to last read message
+                            const messageTop = lastMessageElement.offsetTop;
+                            const containerHeight = chatContainer.clientHeight;
+                            const scrollPosition = messageTop - (containerHeight / 2) + (lastMessageElement.offsetHeight / 2);
+
+                            chatContainer.scrollTo({
+                                top: scrollPosition,
+                                behavior: 'smooth'
+                            });
+                        } else {
+                            // If no read or unread messages found, scroll to bottom
+                            chatContainer.scrollTop = chatContainer.scrollHeight;
+                        }
+                    });
+
+                    loadNewMessages = usersResponse.data.message_data.hasMore;
+                }
+            }).catch(error => {
+                console.error("There was a problem with the fetch operation:", error);
+            });
+        }
+
+        // Load initial users
+        loadUsers(currentPage, '');
+        loadChatUsers(chatUserCurrentPage, '');
+
+        function scrollChatToBottom() {
+            if (chatContainer) {
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString();
+        }
+
+        // Utility functions
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // loadUserByUserId(toUserId);
+
+        // Handle user selection
+        function handleUserSelection(userId, firstName, lastName, clickedElement) {
+
+            // Show loading state
+            chatList.innerHTML = '<div class="loading">Loading messages...</div>';
+
+            // Update state
+            toUserId = userId;
+            toUserName = `${firstName} ${lastName}`;
+
+            // Update UI
+            document.getElementById("toUserName").textContent = toUserName;
+
+            // Remove active state from all users
+            document.querySelectorAll('.chat-list a').forEach(item => {
+                item.classList.remove('active-user');
+            });
+
+            // Add active state to selected user
+            if (clickedElement) {
+                clickedElement.classList.add('active-user');
+            }
+
+            chatList.innerHTML = '';
+
+            // Load messages
+            loadUserMessages(userId);
+
+            // Clear typing indicator
+            typingDiv.textContent = "";
+        }
+
+        function createQueryString(params) {
+            const queryString = Object.keys(params)
+                .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+                .join('&');
+            // return queryString;
+            return queryString ? `${queryString}` : '';
+        }
+
+
+        function loadMoreMessages(userId, lastMessageId) {
+
+            const requestParams = {
+                lastMessageId,
+            };
+
+            const loadMoreUrl = `${apiUrl}/messages/load-more/${userId}?${createQueryString(requestParams)}`;
+
+            fetch(loadMoreUrl, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            }).then(response => {
+                handleUnauthorized(response);
+                if (!response.ok) {
+                    throw new Error("Network response was not ok");
+                }
+                return response.json();
+            }).then(data => {
+
+
+                if (data.data.messages.length > 0) {
+                    data.data.messages.forEach(message => {
+                        const messageElement = createMessageElement(
+                            message,
+                            message.from_user_id._id
+                        )
+                        chatList.appendChild(messageElement);
+                    });
+                }
+                loadNewMessages = data.data.hasMore;
+            }).catch(error => {
+                console.error("Error loading messages:", error);
+                chatList.innerHTML = `
+                        <li class="error">
+                            <p>Failed to load messages. Please try again.</p>
+                        </li>
+                    `;
+            });
+        }
+
+        function loadMoreOldMessages(userId, firstMessageId) {
+            const requestParams = {
+                firstMessageId,
+            };
+
+            const loadMoreUrl = `${apiUrl}/messages/load-more-old/${userId}?${createQueryString(requestParams)}`;
+
+            fetch(loadMoreUrl, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            }).then(response => {
+                handleUnauthorized(response);
+                if (!response.ok) {
+                    throw new Error("Network response was not ok");
+                }
+                return response.json();
+            }).then(data => {
+                if (data.data.messages.length > 0) {
+                    data.data.messages.forEach(message => {
+                        const messageElement = createMessageElement(
+                            message,
+                            message.from_user_id._id,
+                            'old'
+                        )
+                        chatList.insertBefore(messageElement, chatList.firstElementChild);
+                    });
+                    chatContainer.scrollBy({
+                        top: 50,
+                        behavior: 'smooth' // This enables smooth scrolling
+                    });
+                }
+                loadOldMessages = data.data.hasMore;
+
+            }).catch(error => {
+                console.error("Error loading messages:", error);
+                chatList.innerHTML = `
+                        <li class="error">
+                            <p>Failed to load messages. Please try again.</p>
+                        </li>
+                    `;
+            });
+
+        }
+
+        // Load messages for selected user and load more messages when scrolled to the bottom
+        function loadUserMessages(userId, params = null) {
+
+            // Construct the URL with query parameters
+            const getMessagesUrl = `${apiUrl}/messages/${userId}`;
+            fetch(getMessagesUrl, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            }).then(response => {
+                handleUnauthorized(response);
+                if (!response.ok) {
+                    throw new Error("Network response was not ok");
+                }
+                return response.json();
+            }).then(data => {
+                chatList.innerHTML = ''; // Clear only on first load
+
+                if (data.data.message_data.messages.length > 0) {
+                    data.data.message_data.messages.forEach(message => {
+                        const messageElement = createMessageElement(
+                            message,
+                            message.from_user_id._id
+                        )
+                        chatList.appendChild(messageElement);
+                    });
+
+                    // Scroll to latest message
+                    if (chatList.lastElementChild) {
+                        chatList.lastElementChild.scrollIntoView({ behavior: 'smooth' });
+                    }
+
+                } else {
+                    chatList.innerHTML = `
+                        <li class="no-messages">
+                            <p>No messages yet. Start a conversation!</p>
+                        </li>
+                    `;
+                }
+            }).catch(error => {
+                console.error("Error loading messages:", error);
+                chatList.innerHTML = `
+                        <li class="error">
+                            <p>Failed to load messages. Please try again.</p>
+                        </li>
+                    `;
+            });
+        }
+
+        // Scroll handler for pagination
+        const sideBar = document.getElementById('side-bar');
+        sideBar.addEventListener('scroll', debounce(() => {
+
+            if (sideBar.scrollTop + sideBar.clientHeight >= sideBar.scrollHeight) {
+                const activeTab = document.querySelector('#myTab .nav-link.active');
+
+                if (activeTab.id === 'Open-tab') {
+                    if (hasMoreChatUsers) {
+                        chatUserCurrentPage++;
+                        loadChatUsers(chatUserCurrentPage, searchUserString, 'scroll');
+                    }
+                } else {
+                    if (hasMoreUsers) {
+                        currentPage++;
+                        loadUsers(currentPage, searchUserString, 'scroll');
+                    }
+                }
+            }
+        }, 200));
+
+        // Add reconnection handling
+        socket.on("connect_error", (error) => {
+            console.log("Connection error:", error);
+            // You might want to show a connection error message to the user
+        });
+
+        socket.on("reconnect", (attemptNumber) => {
+            console.log("Reconnected after " + attemptNumber + " attempts");
+            // Re-register user as online after reconnection
+            socket.emit("online_user", {
+                userId: user.id,
+                username: username
+            });
+        });
+
+        function getLastVisibleUnreadMessageId() {
+            const messages = chatContainer.querySelectorAll('#chatList li.sender:not(.read)');
+            let lastMessageId = null;
+
+            messages.forEach(message => {
+                const messageId = message.getAttribute('data-message-id');
+                if (messageId) {
+                    lastMessageId = messageId; // Update lastMessageId with the current messageId
+                }
+            });
+            return lastMessageId;
+        }
+
+        // Enhanced function to get visible unread messages
+        /* function getVisibleUnreadMessageIds() {
+            const messages = chatContainer.querySelectorAll('#chatList li.sender:not(.read)');
+            const messageIds = [];
+            const containerRect = chatContainer.getBoundingClientRect();
+            const buffer = 20; // 20px buffer zone
+            let firstVisibleMessageId = null;
+            let lastVisibleMessageId = null;
+
+            messages.forEach(message => {
+                const rect = message.getBoundingClientRect();
+
+                // Check if message is fully or partially visible in viewport
+                const isVisible = (
+                    (rect.top >= containerRect.top - buffer && rect.top <= containerRect.bottom + buffer) ||
+                    (rect.bottom >= containerRect.top - buffer && rect.bottom <= containerRect.bottom + buffer) ||
+                    (rect.top <= containerRect.top && rect.bottom >= containerRect.bottom)
+                );
+
+                if (isVisible) {
+                    const messageId = message.getAttribute('data-message-id');
+                    if (messageId) {
+                        messageIds.push(messageId);
+                        if (!firstVisibleMessageId) {
+                            firstVisibleMessageId = messageId;
+                        }
+                        lastVisibleMessageId = messageId;
+                        console.log('Visible unread message:', {
+                            id: messageId,
+                            content: message.querySelector('p')?.textContent,
+                            position: {
+                                top: rect.top - containerRect.top,
+                                bottom: rect.bottom - containerRect.top
+                            }
+                        });
+                    }
+                }
+            });
+
+
+            // If we found visible messages, add all IDs from first to last
+            if (firstVisibleMessageId && lastVisibleMessageId) {
+                const allMessages = chatContainer.querySelectorAll('#chatList li.sender');
+
+                let addToIds = false;
+
+                allMessages.forEach(message => {
+                    const messageId = message.getAttribute('data-message-id');
+                    if (messageId === firstVisibleMessageId) {
+                        addToIds = true; // Start adding IDs
+                    }
+                    if (addToIds) {
+                        messageIds.push(messageId);
+                    }
+                    if (messageId === lastVisibleMessageId) {
+                        addToIds = false; // Stop adding IDs
+                    }
+                });
+            }
+            return messageIds;
+        } */
+
+
+        function markMessagesAsRead() {
+            if (!toUserId) return;
+
+            const lastMessageId = getLastVisibleUnreadMessageId();
+
+            if (!lastMessageId) return;
+
+            fetch(`${apiUrl}/messages/${toUserId}/read`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ lastMessageId })
+            })
+                .then(response => {
+                    handleUnauthorized(response);
+                    if (!response.ok) {
+                        throw new Error("Failed to mark messages as read");
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Mark messages as read in UI
+                    data.updatedMessageIds.forEach(messageId => {
+                        const messageElement = document.querySelector(`#chatList li[data-message-id="${messageId}"]`);
+                        if (messageElement) {
+                            messageElement.classList.add('read');
+                        }
+                    });
+
+                    // Update badge count
+                    updateUnreadCount(toUserId, data.updatedCount, 'read');
+
+                    // Emit socket event to notify sender
+                    socket.emit('messages_read', {
+                        fromUserId: user.id,
+                        toUserId: toUserId,
+                        messageIds: data.updatedMessageIds
+                    });
+                })
+                .catch(error => {
+                    console.error("Error marking messages as read:", error);
+                });
+        }
+
+        function updateUnreadCount(userId, count, countType) {
+            const userElement = document.querySelector(`#chatUserList [data-user-id="${userId}"]`);
+            if (userElement) {
+                const badgeElement = userElement.querySelector('.badge-count');
+                if (badgeElement) {
+                    let newUnreadCount;
+                    const unreadCount = parseInt(badgeElement.textContent);
+
+                    if (countType === 'read') {
+                        newUnreadCount = unreadCount - count;
+                        badgeElement.textContent = newUnreadCount;
+                    } else {
+                        newUnreadCount = unreadCount + count;
+                        badgeElement.textContent = newUnreadCount;
+                    }
+
+                    if (newUnreadCount === 0) {
+                        badgeElement.remove();
+                    }
+                } else {
+
+                    let unreadCountFromServer = 0;
+
+                    fetch(`${apiUrl}/messages/unread-count/${userId}`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                        .then(response => {
+                            handleUnauthorized(response);
+                            if (!response.ok) {
+                                throw new Error("Failed to get unread count");
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            unreadCountFromServer = data.data.unreadCount;
+
+                            const statusSpan = userElement.querySelector('.online-status');
+                            if (statusSpan && unreadCountFromServer > 0) {
+                                const badgeHtml = `<span class="badge-count">${unreadCountFromServer}</span>`;
+                                statusSpan.insertAdjacentHTML('afterend', badgeHtml); // Insert after online-status
+                            }
+                        })
+                        .catch(error => {
+                            console.error("Error getting unread count:", error);
+                        });
+                }
+            }
+        }
+
+        // Update read status when messages are read
+        socket.on('messages_read_ack', (data) => {
+            const { messageIds } = data;
+
+            messageIds.forEach(messageId => {
+                const messageElement = document.querySelector(`#chatList li[data-message-id="${messageId}"]`);
+                if (messageElement) {
+                    const readStatus = messageElement.querySelector('.read-status');
+                    if (readStatus) {
+                        readStatus.innerHTML = '<i class="fa fa-check-double"></i>';
+                    }
+                }
+            });
+        });
+
+        // Modify the chat container scroll event listener
+        let scrollTimeout;
+        chatContainer.addEventListener('scroll', () => {
+
+            // load new messages when scrolled to the bottom
+            if (chatContainer.scrollTop + chatContainer.clientHeight >= chatContainer.scrollHeight) {
+                if (loadNewMessages) {
+                    const lastMessageElement = chatList.lastElementChild; // Get the last message element
+                    const lastMessageId = lastMessageElement ? lastMessageElement.getAttribute('data-message-id') : null; // Get the data-message-id
+                    if (lastMessageId) {
+                        loadMoreMessages(toUserId, lastMessageId);
+                    }
+                }
+
+                const lastMessageElement = chatList.lastElementChild; // Get the last message element again
+                if (lastMessageElement) { // Check if lastMessageElement is not null
+                    const lastMessageId = lastMessageElement.getAttribute('data-message-id');
+                    // Check if user has scrolled to the bottom
+                    clearTimeout(scrollTimeout);
+
+                    scrollTimeout = setTimeout(() => {
+                        const lastMessageId = getLastVisibleUnreadMessageId();
+                        if (lastMessageId) {
+                            markMessagesAsRead();
+                        }
+                    }, 100); // 100ms debounce
+                }
+            }
+
+            // Check if user has scrolled to the top
+            if (chatContainer.scrollTop === 0) {
+                const firstMessageElement = chatList.firstElementChild; // Get the first message element
+                const firstMessageId = firstMessageElement ? firstMessageElement.getAttribute('data-message-id') : null; // Get the data-message-id
+                if (loadOldMessages && firstMessageId) {
+                    loadMoreOldMessages(toUserId, firstMessageId); // Call the function to load old messages
+                }
+            }
+        });
+
+        // Add hover tracking for unread messages
+        function setupMessageHoverTracking() {
+            let hoverTimer;
+            const HOVER_DELAY = 1000; // 1 second delay
+
+            chatList.addEventListener('mouseover', (e) => {
+                const messageElement = e.target.closest('li.sender:not(.read)');
+                if (!messageElement) return;
+
+                clearTimeout(hoverTimer);
+                hoverTimer = setTimeout(() => {
+                    const messageId = messageElement.getAttribute('data-message-id');
+                    if (messageId) {
+                        const lastMessageId = getLastVisibleUnreadMessageId();
+                        if (lastMessageId === messageId) {
+                            markMessagesAsRead();
+                        }
+                    }
+                }, HOVER_DELAY);
+            });
+
+            chatList.addEventListener('mouseout', () => {
+                clearTimeout(hoverTimer);
+            });
+        }
+
+        setupMessageHoverTracking();
+
+        // Add this helper function to create message elements
+        function createMessageElement(message, fromUserId, messageType = null) {
+            const chatListItems = document.createElement("li");
+            chatListItems.setAttribute('data-message-id', message._id);
+
+            // Determine if message is from current user
+            const messageClass = String(fromUserId) === String(user.id) ? 'reply' : messageType === 'old' ? 'sender read' : 'sender';
+            chatListItems.className = messageClass;
+
+            // Add read status only for sent messages (reply)
+            const readStatus = messageClass === 'reply' ?
+                `<span class="read-status">
+                ${message.is_read ?
+                    '<i class="fa fa-check-double"></i>' :
+                    '<i class="fa fa-check"></i>'}
+                </span>` : '';
+
+            chatListItems.innerHTML = `
+                <p>${message.content}</p>
+                <span class="time">${formatDate(message.createdAt)}</span>
+                ${readStatus}
+            `;
+
+            return chatListItems;
+        }
+
+        const searchUser = document.getElementById('searchUser');
+
+        searchUser.addEventListener('keyup', (e) => {
+            const searchValue = e.target.value;
+            // if (searchValue.length >= 3) {
+            const activeTab = document.querySelector('#myTab .nav-link.active');
+
+            if (activeTab.id === 'Open-tab') {
+                loadChatUsers(1, searchValue, 'keyup');
+            } else {
+                loadUsers(1, searchValue, 'keyup');
+            }
+
+            // }
+        });
+
+        // Load header and footer components
+        function loadComponent(id, file, callback) {
+            fetch(file)
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById(id).innerHTML = data;
+                    if (callback) callback();
+                })
+                .catch(error => console.error("Error loading " + file + ":", error));
+        }
+
+        // Load header and attach logout function after it's loaded
+        loadComponent("header-placeholder", "header.html", function () {
+            document.getElementById("logoutButton").addEventListener("click", function () {
+                localStorage.removeItem("authToken");
+                localStorage.removeItem("userData");
+                window.location.href = "index.html"; // Redirect to login page
+            });
+        });
+
+        // Load footer
+        loadComponent("footer-placeholder", "footer.html");
+
+        // Redirect to login if no auth token exists
+        if (!localStorage.getItem("authToken")) {
+            window.location.href = "index.html";
+        }
+
+
+
+    </script>
+</body>
+
+</html>
