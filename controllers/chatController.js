@@ -13,7 +13,6 @@ const getChatUserList = async (req, res) => {
     const searchQuery = req.query.search?.trim() || '';
     let nameFilter = null;
 
-
     if (searchQuery) {
         const nameParts = searchQuery.split(/\s+/);
         if (nameParts.length === 2) {
@@ -32,8 +31,6 @@ const getChatUserList = async (req, res) => {
             };
         }
     }
-
-    console.log("authUserId", authUserId,  new mongoose.Types.ObjectId(authUserId))
 
     try {
         const usersWithMessages = await Message.aggregate([
@@ -273,11 +270,13 @@ const getMessages = async (req, res) => {
 // Create a new message
 const createMessage = async (req, res) => {
     try {
-        const { content, to_user_id } = req.body;
+        const { content, to_user_id, type = 'text'} = req.body;
         const message = new Message({
             content,
             from_user_id: req.user.id,
-            to_user_id
+            to_user_id,
+            type,
+            // media: req.file ? req.file.location : null // For AWS S3 or similar storage
         });
 
         await message.save();
@@ -416,6 +415,7 @@ const loadMoreOldMessages = async (req, res) => {
 
         const limit = process.env.PAGE_LIMIT;
         let hasMore = false;
+        let messages = [];
 
         // Fetch the last message to get its createdAt timestamp
         const firstMessage = await Message.findById(firstMessageId).select('createdAt');
@@ -427,16 +427,19 @@ const loadMoreOldMessages = async (req, res) => {
             ]
         };
 
-        const messages = await Message.find({
-            ...query,
-            createdAt: { $lte: firstMessage.createdAt },
-            _id: { $ne: firstMessageId },
-        })
-            .sort({ createdAt: -1 })
-            .limit(limit)
-            .populate('from_user_id', 'firstName lastName')
-            .populate('to_user_id', 'firstName lastName');
-
+        if (firstMessage) {
+            const messages = await Message.find({
+                ...query,
+                createdAt: { $lte: firstMessage.createdAt },
+                _id: { $ne: firstMessageId },
+            })
+                .sort({ createdAt: -1 })
+                .limit(limit)
+                .populate('from_user_id', 'firstName lastName')
+                .populate('to_user_id', 'firstName lastName');
+        } else {
+            console.log('no old message');
+        }
 
         if (messages.length > 0) {
             hasMore = true;

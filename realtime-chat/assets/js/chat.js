@@ -23,6 +23,7 @@ const chatUserList = document.getElementById("chatUserList");
 const chatList = document.getElementById("chatList");
 
 let chatContainer = document.querySelector('.chatbox .modal-body');
+let activeTab = document.querySelector('#myTab .nav-link.active');
 
 let currentPage = 1;
 let chatUserCurrentPage = 1;
@@ -59,23 +60,11 @@ socket.on("sender_last_message", (msg) => {
 
     // Only process if this is the relevant chat window
     if (toUserId === msg.toUserId) {
-        const newDate = new Date().toLocaleString();
-        const newchatItem = document.createElement("li");
-        newchatItem.setAttribute('data-message-id', msg.messageId);
 
-        newchatItem.className = 'reply'; // Always 'reply' for sender
-
-        newchatItem.innerHTML = `
-            <p>${msg.content}</p>
-            <span class="time">${newDate}</span>
-            <span class="read-status"><i class="fa fa-check"></i></span>
-        `;
-        chatList.appendChild(newchatItem);
-
+        chatList.appendChild(createLatestMessageHtml(msg, 'reply')); // Always 'reply' for sender
         // Update chat list
         updateChatUserList(msg.toUserId, msg.content);
 
-        // const chatContainer = document.querySelector('.chatbox .modal-body');
         if (chatContainer) {
             chatContainer.scrollBy({
                 top: chatContainer.scrollHeight,
@@ -84,6 +73,23 @@ socket.on("sender_last_message", (msg) => {
         }
     }
 });
+
+function createLatestMessageHtml(msg, messageClass) {
+
+    const newDate = new Date().toLocaleString();
+    const newChatItem = document.createElement("li");
+    newChatItem.setAttribute('data-message-id', msg.messageId);
+
+    newChatItem.className = messageClass;
+    const readStatus = messageClass === 'reply' ? '<span class="read-status"><i class="fa fa-check"></i></span>' : ''
+
+    newChatItem.innerHTML = `
+        <p>${msg.content}</p>
+        <span class="time">${newDate}</span>
+        ${readStatus}
+    `;
+    return newChatItem;
+}
 
 // Socket event listener for receiver's messages
 socket.on("receiver_last_message", (msg) => {
@@ -105,22 +111,15 @@ socket.on("receiver_last_message", (msg) => {
             }
         }
 
-        const newDate = new Date().toLocaleString();
-
-        // Add message to chat
-        const newchatItem = document.createElement("li");
-        newchatItem.setAttribute('data-message-id', msg.messageId);
-        newchatItem.className = 'sender'; // Always 'sender' for receiver
-        newchatItem.innerHTML = `
-            <p>${msg.content}</p>
-            <span class="time">${newDate}</span>
-        `;
-        chatList.appendChild(newchatItem);
+        chatList.appendChild(createLatestMessageHtml(msg, 'sender')); // Always 'sender' for receiver
 
         // Update chat list
         updateChatUserList(msg.fromUserId, msg.content, 'receive');
 
         updateUnreadCount(msg.fromUserId, 1, 'unread');
+    } else {
+        updateUnreadCount(msg.fromUserId, 1, 'unread');
+        moveSenderToTop(msg.fromUserId, msg.content);
     }
 });
 
@@ -236,6 +235,7 @@ form.addEventListener("submit", (e) => {
 function updateChatUserList(userId, lastMessage, messageType = 'sent') {
     // Check if user already exists in chat user list
     const existingUser = document.querySelector(`#chatUserList [data-user-id="${userId}"]`);
+    const isNotAtTop = existingUser && existingUser !== chatUserList.firstChild;
 
     if (existingUser) {
         // Update last message
@@ -245,10 +245,23 @@ function updateChatUserList(userId, lastMessage, messageType = 'sent') {
         }
 
         // Move user to top if they're not already first
-        const firstUser = chatUserList.firstChild;
+        /* const firstUser = chatUserList.firstChild;
         if (firstUser && firstUser !== existingUser) {
             chatUserList.removeChild(existingUser);
             chatUserList.insertBefore(existingUser, firstUser);
+
+            // Scroll the moved user into view at the top
+            const sideBar = document.getElementById('side-bar');
+            sideBar.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        } */
+
+        // Move user to top if they're not already first (for both sent and received messages)
+        if (isNotAtTop) {
+            chatUserList.removeChild(existingUser);
+            chatUserList.insertBefore(existingUser, chatUserList.firstChild);
 
             // Scroll the moved user into view at the top
             const sideBar = document.getElementById('side-bar');
@@ -269,3 +282,28 @@ function updateChatUserList(userId, lastMessage, messageType = 'sent') {
         }
     }
 }
+
+// Function to update online status for a user
+function updateUserOnlineStatus(userId, isOnline) {
+    ['userList', 'chatUserList'].forEach(listId => {
+        const userElements = document.querySelectorAll(`#${listId} .user-list-item`);
+        userElements.forEach(element => {
+            if (element.getAttribute('data-user-id') === userId) {
+                const statusSpan = element.querySelector('.online-status');
+                if (statusSpan) {
+                    if (isOnline) {
+                        statusSpan.classList.add('online');
+                    } else {
+                        statusSpan.classList.remove('online');
+                    }
+                }
+            }
+        });
+    });
+}
+
+document.querySelectorAll('#myTab .nav-link').forEach(tab => {
+    tab.addEventListener('shown.bs.tab', function() {
+        activeTab = document.querySelector('#myTab .nav-link.active');
+    });
+});

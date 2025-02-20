@@ -150,6 +150,34 @@
             z-index: 1000;
             /* Ensures it stays on top */
         }
+
+        .new-message-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background-color: rgb(55, 214, 23);
+            color: white;
+            border-radius: 50%;
+            width: 15px;
+            height: 15px;
+            font-size: 10px;
+            text-align: center;
+            line-height: 15px;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.2);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
     </style>
 </head>
 
@@ -162,19 +190,14 @@
             <div class="row">
                 <div class="col-12">
                     <div class="chat-area">
-                        <!-- chatlist -->
+                        <!-- chat-list -->
                         <div class="chatlist">
                             <div class="modal-dialog-scrollable">
                                 <div class="modal-content">
-
-
                                     <div class="chat-header">
                                         <div class="msg-search">
                                             <input type="text" class="form-control" id="searchUser" placeholder="Search"
                                                 aria-label="search">
-                                            <!-- <a class="add" href="#"><img class="img-fluid"
-                                                    src="https://mehedihtml.com/chatbox/assets/img/add.svg"
-                                                    alt="add"></a> -->
                                         </div>
 
                                         <ul class="nav nav-tabs" id="myTab" role="tablist">
@@ -219,11 +242,9 @@
                                 </div>
                             </div>
                         </div>
-                        <!-- chatlist -->
+                        <!-- chat-list -->
 
-
-
-                        <!-- chatbox -->
+                        <!-- chat-box -->
                         <div class="chatbox">
                             <div class="modal-dialog-scrollable">
                                 <div class="modal-content">
@@ -304,7 +325,7 @@
                             </div>
                         </div>
                     </div>
-                    <!-- chatbox -->
+                    <!-- chat-box -->
 
                 </div>
             </div>
@@ -319,32 +340,66 @@
         integrity="sha384-mZLF4UVrpi/QTWPA7BjNPEnkIfRFn4ZEO3Qt/HFklTJBj/gBOV8G3HcKn4NfQblz"
         crossorigin="anonymous"></script>
 
-    <script src="footer.js"></script>
+    <script src="assets/js/footer.js"></script>
     <script src="assets/js/chat.js"></script>
     <script>
+        function newMessageIndicator() {
+            // Get the Open-tab button
+            const openTab = document.getElementById('Open-tab');
+
+            // Create a notification badge if it doesn't exist
+            let badge = openTab.querySelector('.new-message-badge');
+            if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'new-message-badge';
+                openTab.style.position = 'relative';
+                openTab.appendChild(badge);
+            }
+
+            // Add animation
+            badge.style.animation = 'pulse 1s ease-in-out';
+
+            // Remove animation after it completes
+            setTimeout(() => {
+                badge.style.animation = '';
+            }, 1000);
+        }
+        // Clear the badge when switching to Open-tab
+        document.getElementById('Open-tab').addEventListener('click', () => {
+            const badge = document.querySelector('#Open-tab .new-message-badge');
+            if (badge) {
+                badge.remove();
+            }
+        });
 
         // Function to move sender to top of chat list when receiving a message
-        function moveSenderToTop(senderId, lastMessage) {
-
+        function moveSenderToTop(senderId, latestMessage) {
             const existingUser = document.querySelector(`#chatUserList [data-user-id="${senderId}"]`);
-
             if (existingUser) {
                 // Update last message
                 const messagePreview = existingUser.querySelector('.flex-grow-1 p');
                 if (messagePreview) {
-                    messagePreview.textContent = lastMessage;
+                    messagePreview.textContent = latestMessage;
                 }
 
                 // Always move to top regardless of current position
                 chatUserList.removeChild(existingUser);
                 chatUserList.insertBefore(existingUser, chatUserList.firstChild);
 
-                // Scroll the moved user into view at the top
-                const sideBar = document.getElementById('side-bar');
-                sideBar.scrollTo({
-                    top: 0,
-                    behavior: 'smooth'
-                });
+
+                console.log('activeTab moveSenderToTop', activeTab.id);
+
+
+                if (activeTab.id === 'Open-tab') {
+                    // Scroll the moved user into view at the top
+                    const sideBar = document.getElementById('side-bar');
+                    sideBar.scrollTo({
+                        top: 0,
+                        behavior: 'smooth'
+                    });
+                } else {
+                    newMessageIndicator()
+                }
 
                 // Also move in the all users list
                 const userInAllList = document.querySelector(`#userList [data-user-id="${senderId}"]`);
@@ -353,78 +408,88 @@
                     userList.insertBefore(userInAllList, userList.firstChild);
                 }
             } else {
-                // If sender not in chat list, fetch their details and create new entry
-                fetch(`${apiUrl}/users/${senderId}`, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                }).then(response => {
-                    handleUnauthorized(response);
-                    return response.json();
-                }).then(response => {
-                    const userData = response.data.user;
-                    const newChatUserListItem = document.createElement("a");
-                    newChatUserListItem.className = "d-flex align-items-center user-list-item";
-                    newChatUserListItem.setAttribute('data-user-id', senderId);
-
-                    newChatUserListItem.innerHTML = `
-                        <div class="flex-shrink-0">
-                            <img class="img-fluid profile-img" src="../assets/static-images/user-icon.png" alt="user img">
-                            <span class="online-status"></span>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h3>${userData.firstName} ${userData.lastName}</h3>
-                            <p>${lastMessage}</p>
-                        </div>
-                    `;
-
-                    // Add click handler
-                    newChatUserListItem.addEventListener('click', debounce(() =>
-                        handleUserSelection(senderId, userData.firstName, userData.lastName, newChatUserListItem)
-                        , 300));
-
-                    // Check if user is online
-                    if (window.onlineUsers && window.onlineUsers.some(ou => ou.userId === senderId)) {
-                        const statusSpan = newChatUserListItem.querySelector('.online-status');
-                        if (statusSpan) {
-                            statusSpan.classList.add('online');
+                if (activeTab.id === 'Open-tab') {
+                    // If sender not in chat list, fetch their details and create new entry
+                    fetch(`${apiUrl}/users/${senderId}`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
                         }
-                    }
+                    }).then(response => {
+                        handleUnauthorized(response);
+                        return response.json();
+                    }).then(response => {
+                        const newChatUserListItem = createUserListItemHtml(response.data.user, true, latestMessage)
+                        // Insert at the top of chat list
+                        chatUserList.insertBefore(newChatUserListItem, chatUserList.firstChild);
 
-                    // Insert at the top of chat list
-                    chatUserList.insertBefore(newChatUserListItem, chatUserList.firstChild);
+                        updateUnreadCount(senderId, 1, 'unread');
 
-                    // Scroll to top
-                    const sideBar = document.getElementById('side-bar');
-                    sideBar.scrollTo({
-                        top: 0,
-                        behavior: 'smooth'
+                        // Scroll to top
+                        const sideBar = document.getElementById('side-bar');
+                        sideBar.scrollTo({
+                            top: 0,
+                            behavior: 'smooth'
+                        });
+                    }).catch(error => {
+                        console.error("Error fetching user details:", error);
                     });
-                }).catch(error => {
-                    console.error("Error fetching user details:", error);
-                });
+                } else {
+                    newMessageIndicator()
+                }
             }
         }
 
-        // Function to update online status for a user
-        function updateUserOnlineStatus(userId, isOnline) {
-            ['userList', 'chatUserList'].forEach(listId => {
-                const userElements = document.querySelectorAll(`#${listId} .user-list-item`);
-                userElements.forEach(element => {
-                    if (element.getAttribute('data-user-id') === userId) {
-                        const statusSpan = element.querySelector('.online-status');
-                        if (statusSpan) {
-                            if (isOnline) {
-                                statusSpan.classList.add('online');
-                            } else {
-                                statusSpan.classList.remove('online');
-                            }
-                        }
-                    }
-                });
-            });
+        /**
+         * Updates the online status of a user in the UI.
+         * @param {HTMLElement} element - The DOM element containing the online status indicator.
+         * @param {string} userId - The ID of the user.
+         */
+        function updateOnlineStatus(element, userId) {
+            if (!element || !userId) return;
+
+            const isOnline = window.onlineUsers && window.onlineUsers.some(onlineUser => onlineUser.userId === userId);
+            const statusSpan = element.querySelector('.online-status');
+
+            if (statusSpan) {
+                if (isOnline) {
+                    statusSpan.classList.add('online');
+                } else {
+                    statusSpan.classList.remove('online');
+                }
+            }
+        }
+
+        function createUserListItemHtml(user, isChatUser = false, latestMessage = '') {
+            const listItem = document.createElement("a");
+            listItem.className = "d-flex align-items-center user-list-item";
+            listItem.setAttribute('data-user-id', user._id || user.userId);
+
+            const profileImg = "../assets/static-images/user-icon.png";
+            const name = user.firstName + " " + user.lastName;
+            const message = isChatUser ? user.latestMessage?.content || '' : '';
+            const unreadCount = isChatUser && user.unreadCount > 0 ? `<span class="badge-count">${user.unreadCount}</span>` : '';
+
+            listItem.innerHTML = `
+                <div class="flex-shrink-0">
+                    <img class="img-fluid profile-img" src="${profileImg}" alt="user img">
+                    <span class="online-status"></span>
+                    ${unreadCount}
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h3>${name}</h3>
+                    <p>${message || latestMessage}</p>
+                </div>
+            `;
+
+            // Add click handler with debounce
+            listItem.addEventListener('click', debounce(() =>
+                handleUserSelection(user.userId || user._id, user.firstName, user.lastName, listItem)
+                , 300));
+
+            updateOnlineStatus(listItem, user.userId || user._id);
+            return listItem;
         }
 
         // Function to load users
@@ -462,7 +527,8 @@
                     }
 
                     usersResponse.data.users.forEach(user => {
-                        const userListItem = document.createElement("a");
+
+                        /* const userListItem = document.createElement("a");
                         userListItem.className = "d-flex align-items-center user-list-item";
                         userListItem.setAttribute('data-user-id', user._id);
                         userListItem.innerHTML = `
@@ -487,7 +553,9 @@
                             if (statusSpan) {
                                 statusSpan.classList.add('online');
                             }
-                        }
+                        } */
+
+                        const userListItem = createUserListItemHtml(user, false);
 
                         userList.appendChild(userListItem);
                     });
@@ -530,15 +598,9 @@
                 }
 
                 usersResponse.data.users.forEach((user, index) => {
-                    const chatUserListItem = document.createElement("a");
+                    /* const chatUserListItem = document.createElement("a");
                     chatUserListItem.className = "d-flex align-items-center user-list-item";
                     chatUserListItem.setAttribute('data-user-id', user.userId);
-                    if (index === 0 && page === 1) {
-                        toUserId = user.userId;
-                        toUserName = user.firstName + " " + user.lastName
-                        document.getElementById("toUserName").textContent = toUserName
-                        chatUserListItem.classList.add('active-user');
-                    }
 
                     chatUserListItem.innerHTML = `
                         <div class="flex-shrink-0">
@@ -560,13 +622,21 @@
                         }
                     }
 
-
                     // Add click handler with debounce
                     chatUserListItem.addEventListener('click', debounce(() =>
                         handleUserSelection(user.userId, user.firstName, user.lastName, chatUserListItem)
-                        , 300));
-                    chatUserList.appendChild(chatUserListItem);
+                        , 300)); */
 
+                    const chatUserListItem = createUserListItemHtml(user, true);
+
+                    if (index === 0 && page === 1) {
+                        toUserId = user.userId;
+                        toUserName = user.firstName + " " + user.lastName
+                        document.getElementById("toUserName").textContent = toUserName
+                        chatUserListItem.classList.add('active-user');
+                    }
+
+                    chatUserList.appendChild(chatUserListItem);
                 });
 
                 let firstUnreadMessage = null;
@@ -600,7 +670,6 @@
                         lastMessageElement = messageElement;
 
                         chatList.appendChild(messageElement);
-
                     })
 
                     // Wait for images and content to load
@@ -667,8 +736,6 @@
             };
         }
 
-        // loadUserByUserId(toUserId);
-
         // Handle user selection
         function handleUserSelection(userId, firstName, lastName, clickedElement) {
 
@@ -705,7 +772,6 @@
             const queryString = Object.keys(params)
                 .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
                 .join('&');
-            // return queryString;
             return queryString ? `${queryString}` : '';
         }
 
@@ -856,8 +922,6 @@
         sideBar.addEventListener('scroll', debounce(() => {
 
             if (sideBar.scrollTop + sideBar.clientHeight >= sideBar.scrollHeight) {
-                const activeTab = document.querySelector('#myTab .nav-link.active');
-
                 if (activeTab.id === 'Open-tab') {
                     if (hasMoreChatUsers) {
                         chatUserCurrentPage++;
@@ -1213,8 +1277,6 @@
         if (!localStorage.getItem("authToken")) {
             window.location.href = "index.html";
         }
-
-
 
     </script>
 </body>
