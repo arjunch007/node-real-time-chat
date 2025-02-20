@@ -104,6 +104,7 @@ socket.on("receiver_last_message", (msg) => {
             // Move sender to top only if they're not already at top or don't exist in the list
             moveSenderToTop(msg.fromUserId, msg.content);
         } else {
+
             // Just update the message preview if user is already at top
             const messagePreview = existingUser.querySelector('.flex-grow-1 p');
             if (messagePreview) {
@@ -184,20 +185,86 @@ messageInput.addEventListener("input", () => {
     }
 });
 
+const fileInput = document.getElementById('upload');
+const fileAttachmentContainer = document.getElementById('file-attachment');
+
+// Show file icons when files are selected
+fileInput.addEventListener('change', () => {
+    if (fileInput.files.length > 0) {
+        fileAttachmentContainer.innerHTML = ''; // Clear previous previews
+        Array.from(fileInput.files).forEach((file, index) => {
+            const fileWrapper = document.createElement('div');
+            fileWrapper.className = 'file-wrapper';
+            // Preview for image files
+            if (file.type.startsWith('image/')) {
+                const imgPreview = document.createElement('img');
+                imgPreview.src = URL.createObjectURL(file);
+                imgPreview.classList.add('chat-image-preview');
+                fileWrapper.appendChild(imgPreview);
+            } else {
+                // File icon for non-image files
+                const fileIcon = document.createElement('span');
+                fileIcon.textContent = '📄';
+                fileIcon.style.marginRight = '5px';
+                fileWrapper.appendChild(fileIcon);
+            }
+
+            // File name
+            const fileName = document.createElement('span');
+            fileName.textContent = file.name;
+            fileName.style.marginRight = '5px';
+            fileWrapper.appendChild(fileName);
+
+            // Remove icon
+            const removeIcon = document.createElement('span');
+            removeIcon.innerHTML = '&times;';
+            removeIcon.classList.add('remove-icon');
+
+            // Remove file when clicked
+            removeIcon.addEventListener('click', () => {
+                const files = Array.from(fileInput.files);
+                files.splice(index, 1); // Remove the file from the list
+
+                // Update the file input
+                const dataTransfer = new DataTransfer();
+                files.forEach(file => dataTransfer.items.add(file));
+                fileInput.files = dataTransfer.files;
+
+                // Remove the file wrapper from the UI
+                fileAttachmentContainer.removeChild(fileWrapper);
+            });
+
+            // Append remove icon to the wrapper
+            fileWrapper.appendChild(removeIcon);
+
+            // Append wrapper to the container
+            fileAttachmentContainer.appendChild(fileWrapper);
+        });
+    }
+});
+
+
 form.addEventListener("submit", (e) => {
     e.preventDefault();
-    if (messageInput.value && toUserId) {
+    if (messageInput.value && toUserId || fileInput && fileInput.files.length > 0) {
+
+        const formData = new FormData();
+        formData.append('to_user_id', toUserId);
+        formData.append('content', messageInput.value);
+
+        // push files for upload
+        if (fileInput && fileInput.files.length > 0) {
+            Array.from(fileInput.files).forEach(file => {
+                formData.append('files', file);
+            });
+        }
 
         fetch(`${apiUrl}/messages`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                content: messageInput.value,
-                to_user_id: toUserId
-            })
+            body: formData
         })
             .then(response => response.json())
             .then(data => {
@@ -205,26 +272,33 @@ form.addEventListener("submit", (e) => {
                     handleUnauthorized(data)
                 }
 
-                // Remove "no messages" element if it exists
-                const noMessagesElement = chatList.querySelector('.no-messages');
-                if (noMessagesElement) {
-                    noMessagesElement.remove();
+                if (data.status) {
+                    // Remove "no messages" element if it exists
+                    const noMessagesElement = chatList.querySelector('.no-messages');
+                    if (noMessagesElement) {
+                        noMessagesElement.remove();
+                    }
+
+                    socket.emit("send_message", {
+                        toUserId: toUserId,
+                        message: messageInput.value,
+                        messageId: data._id
+                    });
+
+                    // Emit stop typing when message is sent
+                    socket.emit("stop_typing", {
+                        toUserId: toUserId
+                    });
+
+                    updateChatUserList(toUserId, messageInput.value);
+
+                    messageInput.value = "";
+
+                    fileInput.value = ''; 
+                    while (fileAttachmentContainer.firstChild) {
+                        fileAttachmentContainer.removeChild(fileAttachmentContainer.firstChild);
+                    }
                 }
-
-                socket.emit("send_message", {
-                    toUserId: toUserId,
-                    message: messageInput.value,
-                    messageId: data._id
-                });
-
-                // Emit stop typing when message is sent
-                socket.emit("stop_typing", {
-                    toUserId: toUserId
-                });
-
-                updateChatUserList(toUserId, messageInput.value);
-
-                messageInput.value = "";
             }).catch(error => {
                 console.error("There was a problem with the fetch operation:", error);
             })
@@ -303,7 +377,7 @@ function updateUserOnlineStatus(userId, isOnline) {
 }
 
 document.querySelectorAll('#myTab .nav-link').forEach(tab => {
-    tab.addEventListener('shown.bs.tab', function() {
+    tab.addEventListener('shown.bs.tab', function () {
         activeTab = document.querySelector('#myTab .nav-link.active');
     });
 });

@@ -13,14 +13,11 @@ const messageSchema = new mongoose.Schema({
     },
     content: {
         type: String,
-        required: [true, 'Please enter your message.']
     },
     type: {
         type: String,
-        enum: ['text', 'image'],
         default: 'text'
     },
-    media: String,
     is_read: {
         type: Boolean,
         default: 0

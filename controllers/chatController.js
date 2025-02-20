@@ -1,4 +1,6 @@
 const Message = require('../models/Message');
+const Media = require('../models/Media');
+
 const mongoose = require('mongoose');
 
 // Get chat user list
@@ -113,10 +115,6 @@ const getChatUserList = async (req, res) => {
             { $skip: skip },
             { $limit: limit }
         ]);
-
-        /* if (!usersWithMessages.length) {
-            console.log('No data found for user:', authUserId);
-        } */
 
         const totalUsers = await Message.aggregate([
             {
@@ -270,22 +268,34 @@ const getMessages = async (req, res) => {
 // Create a new message
 const createMessage = async (req, res) => {
     try {
-        const { content, to_user_id, type = 'text'} = req.body;
+        const { content, to_user_id } = req.body;
+        const files = req.files;
+        const type = files && files.length > 0 ? 'file' : 'text';
+
         const message = new Message({
             content,
             from_user_id: req.user.id,
             to_user_id,
-            type,
-            // media: req.file ? req.file.location : null // For AWS S3 or similar storage
+            type
         });
 
         await message.save();
         await message.populate('from_user_id', 'username');
         await message.populate('to_user_id', 'username');
 
-        res.status(201).json(message);
+        // If there are files, create media entries
+        if (files && files.length > 0) {
+            const mediaFiles = files.map(file => ({
+                message_id: message._id,
+                filename: file.filename,
+                file_type: file.mimetype
+            }));
+
+            await Media.insertMany(mediaFiles);
+        }
+        res.status(201).json({ status: true });
     } catch (error) {
-        res.status(400).json({ message: error.message });
+        res.status(400).json({ status: false, message: error.message });
     }
 };
 
@@ -415,7 +425,7 @@ const loadMoreOldMessages = async (req, res) => {
 
         const limit = process.env.PAGE_LIMIT;
         let hasMore = false;
-        let messages = [];
+        messages = [];
 
         // Fetch the last message to get its createdAt timestamp
         const firstMessage = await Message.findById(firstMessageId).select('createdAt');
@@ -438,7 +448,7 @@ const loadMoreOldMessages = async (req, res) => {
                 .populate('from_user_id', 'firstName lastName')
                 .populate('to_user_id', 'firstName lastName');
         } else {
-            console.log('no old message');
+            // console.log('no old message');
         }
 
         if (messages.length > 0) {
