@@ -188,8 +188,14 @@ messageInput.addEventListener("input", () => {
 const fileInput = document.getElementById('upload');
 const fileAttachmentContainer = document.getElementById('file-attachment');
 
+
+function removeFileErrorMessage() {
+    document.querySelector('.error-message').innerHTML = ''
+}
+
 // Show file icons when files are selected
 fileInput.addEventListener('change', () => {
+    removeFileErrorMessage()
     if (fileInput.files.length > 0) {
         fileAttachmentContainer.innerHTML = ''; // Clear previous previews
         Array.from(fileInput.files).forEach((file, index) => {
@@ -245,6 +251,8 @@ fileInput.addEventListener('change', () => {
 
 
 form.addEventListener("submit", (e) => {
+    removeFileErrorMessage()
+
     e.preventDefault();
     if (messageInput.value && toUserId || fileInput && fileInput.files.length > 0) {
 
@@ -298,6 +306,8 @@ form.addEventListener("submit", (e) => {
                     while (fileAttachmentContainer.firstChild) {
                         fileAttachmentContainer.removeChild(fileAttachmentContainer.firstChild);
                     }
+                } else {
+                    document.querySelector('.error-message').innerHTML = data.message
                 }
             }).catch(error => {
                 console.error("There was a problem with the fetch operation:", error);

@@ -38,6 +38,12 @@
     </script>
 
     <style>
+        .error-message {
+            color: #c13636;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
         .profile-img {
             width: 45px;
         }
@@ -363,6 +369,8 @@
                                                     id="button"></i>Send</button>
                                         </form>
 
+                                        <div class="error-message"></div>
+
                                         <div class="send-btns">
                                             <div class="attach">
                                                 <div class="button-wrapper">
@@ -372,7 +380,7 @@
                                                             alt="image title"> attached file
                                                     </span><input type="file" name="upload" id="upload"
                                                         class="upload-box" placeholder="Upload File"
-                                                        aria-label="Upload File" multiple>
+                                                        aria-label="Upload File" multiple accept=".png, .jpg, .jpeg, .csv, .pdf">
                                                 </div>
                                             </div>
                                         </div>
