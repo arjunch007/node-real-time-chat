@@ -18,6 +18,16 @@ const messageSchema = new mongoose.Schema({
         type: String,
         default: 'text'
     },
+    media: [{ // New field to store media files
+        filename: {
+            type: String,
+            required: true
+        },
+        file_type: {
+            type: String,
+            required: true
+        }
+    }],
     is_read: {
         type: Boolean,
         default: 0

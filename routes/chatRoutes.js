@@ -21,6 +21,7 @@ router.get('/unread-count/:userId', auth, getUnreadCountMessage);
 router.post('', auth, (req, res, next) => {
     upload.array('files', 3)(req, res, (err) => {
         if (err) {
+
             if (err.code === 'LIMIT_FILE_SIZE') {
                 return res.status(400).json({ status: false, message: 'File size too large. Max 10MB allowed.' });
             }

@@ -7,6 +7,6 @@ module.exports = (req, res, next) => {
         req.user = decoded;
         next();
     } catch (error) {
-        res.status(401).json({ message: 'Authentication required' });
+        res.status(401).json({ status: false, message: 'Authentication required' });
     }
 };

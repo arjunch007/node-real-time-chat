@@ -23,11 +23,13 @@ app.use(cors({
     credentials: true,
 }));
 app.use(bodyParser.json());
+// app.use(express.json());  will use this
 app.use(cookieParser());
 
 // Serve static files from node_modules
 app.use('/assets', express.static(path.join(__dirname, 'node_modules/@fortawesome/fontawesome-free')));
 app.use(express.static("realtime-chat"));
+app.use('/storage/uploads/chat', express.static(path.join(__dirname, 'storage', 'uploads', 'chat')));
 
 // Routes
 app.get("/", (req, res) => {

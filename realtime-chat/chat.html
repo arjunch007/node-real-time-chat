@@ -662,35 +662,6 @@
                 }
 
                 usersResponse.data.users.forEach((user, index) => {
-                    /* const chatUserListItem = document.createElement("a");
-                    chatUserListItem.className = "d-flex align-items-center user-list-item";
-                    chatUserListItem.setAttribute('data-user-id', user.userId);
-
-                    chatUserListItem.innerHTML = `
-                        <div class="flex-shrink-0">
-                            <img class="img-fluid profile-img" src="../assets/static-images/user-icon.png" alt="user img">
-                            <span class="online-status"></span>
-                            ${user.unreadCount > 0 ? `<span class="badge-count">${user.unreadCount}</span>` : ''}
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h3>${user.firstName} ${user.lastName}</h3>
-                            <p>${user.latestMessage.content}</p>
-                        </div>
-                    `;
-
-                    // Check if user is online after adding to DOM
-                    if (window.onlineUsers && window.onlineUsers.some(ou => ou.userId === user.userId)) {
-                        const statusSpan = chatUserListItem.querySelector('.online-status');
-                        if (statusSpan) {
-                            statusSpan.classList.add('online');
-                        }
-                    }
-
-                    // Add click handler with debounce
-                    chatUserListItem.addEventListener('click', debounce(() =>
-                        handleUserSelection(user.userId, user.firstName, user.lastName, chatUserListItem)
-                        , 300)); */
-
                     const chatUserListItem = createUserListItemHtml(user, true);
 
                     if (index === 0 && page === 1) {
@@ -1289,7 +1260,32 @@
                     '<i class="fa fa-check"></i>'}
                 </span>` : '';
 
+            let fileContent = '';
+            if (message.media && message.media.length > 0) {
+                message.media.forEach(file => {
+                    const fileUrl = `/storage/uploads/chat/${file.filename}`;
+                    const fileName = file.filename;
+                    const fileType = file.file_type; // You can use file_type if needed
+
+                    if (fileType.startsWith('image/')) {
+                        fileContent += `
+                            <div class="image-preview">
+                                <img src="${fileUrl}" alt="${fileName}" style="max-width: 200px; max-height: 200px;">
+                            </div>
+                        `;
+                    } else {
+                        fileContent += `
+                            <div class="file-download">
+                                <i class="fa fa-file"></i>
+                                <a href="${fileUrl}" download="${fileName}">${fileName}</a>
+                            </div>
+                        `;
+                    }
+                });
+            }
+
             chatListItems.innerHTML = `
+                <span>${fileContent}</span>
                 <p>${message.content}</p>
                 <span class="time">${formatDate(message.createdAt)}</span>
                 ${readStatus}

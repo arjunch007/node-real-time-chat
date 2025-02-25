@@ -1,5 +1,4 @@
 const Message = require('../models/Message');
-const Media = require('../models/Media');
 
 const mongoose = require('mongoose');
 
@@ -272,28 +271,28 @@ const createMessage = async (req, res) => {
         const files = req.files;
         const type = files && files.length > 0 ? 'file' : 'text';
 
+        let media = []
+
+        if (files && files.length > 0) {
+            media = files.map(file => ({
+                filename: file.filename,
+                file_type: file.mimetype
+            }));
+        }
+
         const message = new Message({
             content,
             from_user_id: req.user.id,
             to_user_id,
-            type
+            type,
+            media
         });
 
         await message.save();
         await message.populate('from_user_id', 'username');
         await message.populate('to_user_id', 'username');
 
-        // If there are files, create media entries
-        if (files && files.length > 0) {
-            const mediaFiles = files.map(file => ({
-                message_id: message._id,
-                filename: file.filename,
-                file_type: file.mimetype
-            }));
-
-            await Media.insertMany(mediaFiles);
-        }
-        res.status(201).json({ status: true });
+        res.status(201).json({ status: true, data: {media, filePath: 'storage/upload/chat'} });
     } catch (error) {
         res.status(400).json({ status: false, message: error.message });
     }
@@ -438,7 +437,7 @@ const loadMoreOldMessages = async (req, res) => {
         };
 
         if (firstMessage) {
-            const messages = await Message.find({
+            messages = await Message.find({
                 ...query,
                 createdAt: { $lte: firstMessage.createdAt },
                 _id: { $ne: firstMessageId },

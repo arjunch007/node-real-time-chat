@@ -3,7 +3,15 @@ const multer = require('multer');
 // Set up storage engine
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, 'storage/uploads/chat/');
+
+        if (req.baseUrl === '/api/messages') {
+            uploadPath = 'storage/uploads/chat'
+        } else {
+            uploadPath = 'storage/uploads'
+        }
+
+
+        cb(null, uploadPath);
     },
     filename: function (req, file, cb) {
         cb(null, `${Date.now().toString()}-${file.originalname}`);
