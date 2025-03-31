@@ -1,7 +1,6 @@
 const express = require('express');
 const http = require('http');
 const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const { Server } = require("socket.io");
@@ -65,8 +64,8 @@ app.use(cors({
     credentials: true
 }));
 
-app.use(bodyParser.json());
-// app.use(express.json());  // will use this
+// app.use(bodyParser.json());
+app.use(express.json());  // will use this
 app.use(cookieParser());
 
 // Serve static files from node_modules
@@ -98,23 +97,8 @@ const connectDB = async () => {
 
 // Initialize Database & Server
 connectDB().then(() => {
-    server.listen(PORT, async () => {
+    server.listen(PORT, () => {
         console.log(`Server running on port ${PORT}. Access it at: http://localhost:${PORT}/`);
         console.log(`Server running at local ip http://${HOST}:${PORT}`);
-
-        const isDevelopment = ['development', 'local'].includes(process.env.NODE_ENV);
-        if (isDevelopment) {
-            // Start ngrok if we're in local
-            try {
-                const ngrok = require('ngrok');
-                const url = await ngrok.connect({
-                    addr: PORT,
-                    authtoken: process.env.NGROK_AUTH_TOKEN // Optional but recommended
-                });
-                console.log(`Ngrok tunnel running at: ${url}`);
-            } catch (err) {
-                console.error('Ngrok error:', err);
-            }
-        }
     });
 });

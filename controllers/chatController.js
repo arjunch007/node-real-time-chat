@@ -305,7 +305,31 @@ const updateMessagesReadStatus = async (req, res) => {
         const fromUserId = req.params.userId; // The sender whose messages we're marking as read
         const toUserId = req.user.id; // The current authenticated user (receiver)
 
+        // Add validation for lastMessageId
+        if (!lastMessageId) {
+            return res.status(400).json({
+                status: false,
+                message: 'lastMessageId is required'
+            });
+        }
+
+        // Validate if lastMessageId is a valid ObjectId
+        if (!mongoose.Types.ObjectId.isValid(lastMessageId)) {
+            return res.status(400).json({
+                status: false,
+                message: 'Invalid lastMessageId format'
+            });
+        }
+
         const lastMessage = await Message.findById(lastMessageId);
+        
+        // Check if message exists
+        if (!lastMessage) {
+            return res.status(404).json({
+                status: false,
+                message: 'Message not found'
+            });
+        }
 
         const query = {
             from_user_id: fromUserId,
