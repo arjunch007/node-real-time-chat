@@ -1,7 +1,8 @@
 // console.log({ apiUrl });
 // console.log({ token });
 
-const socket = io("http://localhost:5000");
+// const socket = io("http://localhost:5000");
+const socket = io(baseUrl);
 
 const user = JSON.parse(localStorage.getItem('userData'))
 

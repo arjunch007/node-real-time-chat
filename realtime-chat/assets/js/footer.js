@@ -1,5 +1,10 @@
-const baseUrl = 'http://localhost:5000'
+// const baseUrl = 'http://localhost:5000'
+
+const baseUrl = window.location.origin
 const apiUrl = `${baseUrl}/api`
+
+// console.log({ apiUrl })
+
 const token = localStorage.getItem('authToken')
 
 function handleUnauthorized(response) {
