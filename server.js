@@ -18,15 +18,13 @@ app.use('/assets', express.static(path.join(__dirname, 'node_modules/@fortawesom
 
 const server = http.createServer(app);
 const io = new Server(server);
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
 // Middleware Configuration
 app.use(cors({
-    origin: 'http://localhost:3000',
+    origin: process.env.FRONTEND_URL || true,
     credentials: true,
 }));
-
-
 
 
 app.use(bodyParser.json());
@@ -222,7 +220,7 @@ const connectDB = async () => {
 
 // Initialize Database & Server
 connectDB().then(() => {
-    server.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}. Access it at: http://localhost:5000/`);
+    server.listen(PORT, '0.0.0.0', () => {
+        console.log(`Server running on port ${PORT}`);
     });
 });
