@@ -41,5 +41,6 @@ jobs:
             git pull origin main
             npm install
             npm run build  # If you have a build step
-            pm2 restart app  # If using PM2, or use: systemctl restart your-service
+            pm2 restart real-time-chat  # If using PM2, or use: systemctl restart your-service
+            pm2 save
             # Or use: sudo systemctl restart your-app (if using systemd)
