@@ -1,5 +1,5 @@
-const baseUrl = 'http://localhost:5000'
-const apiUrl = `${baseUrl}/api`
+const baseUrl = ''
+const apiUrl = '/api'
 const token = localStorage.getItem('authToken')
 
 function handleUnauthorized(response) {
